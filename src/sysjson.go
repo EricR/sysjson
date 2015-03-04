@@ -27,10 +27,10 @@ func main() {
 		if ip == nil {
 			log.Fatal("Invalid IP address provided");
 		}
+		log.Printf("[notice] sys.json providing statistics to %s", *from)
 	}
 
 	log.Printf("[notice] sys.json listening on %s", *listen)
-	log.Printf("[notice] sys.json providing statistics to %s", *from)
 
 	mux := http.NewServeMux()
 
