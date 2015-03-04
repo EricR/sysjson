@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -15,11 +16,21 @@ var (
 	cert     = flag.String("cert", "", "TLS cert file")
 	key      = flag.String("key", "", "TLS key file")
 	password = flag.String("password", "", "Enable basic authentication")
+	from	=	flag.String("from", "", "Address to provide statistics to")
 )
 
 func main() {
 	flag.Parse()
+
+	if len(*from) > 0 {
+		ip := net.ParseIP(*from)
+		if ip == nil {
+			log.Fatal("Invalid IP address provided");
+		}
+	}
+
 	log.Printf("[notice] sys.json listening on %s", *listen)
+	log.Printf("[notice] sys.json providing statistics to %s", *from)
 
 	mux := http.NewServeMux()
 
@@ -39,9 +50,13 @@ func main() {
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{}
-
-	loadModules(resp, r.URL.Query().Get("modules"))
-
+	
+	if len(*from) == 0 || (len(*from) > 0 && strings.HasPrefix(r.RemoteAddr, *from)) {
+		loadModules(resp, r.URL.Query().Get("modules"))
+	} else {
+		resp["error"] = "Not authorised"
+	}
+		
 	respJSON, err := json.Marshal(resp)
 	if err != nil {
 		log.Fatal("[error] Fatal! Could not construct JSON response: %s", err)
