@@ -16,18 +16,18 @@ var (
 	cert     = flag.String("cert", "", "TLS cert file")
 	key      = flag.String("key", "", "TLS key file")
 	password = flag.String("password", "", "Enable basic authentication")
-	from	=	flag.String("from", "", "Address to provide statistics to")
+	whitelist	=	flag.String("whitelist", "", "CIDR whitelist for requests")
 )
 
 func main() {
 	flag.Parse()
-
-	if len(*from) > 0 {
-		ip := net.ParseIP(*from)
-		if ip == nil {
-			log.Fatal("Invalid IP address provided");
+	
+	if len(*whitelist) > 0 {
+		_, _, err := net.ParseCIDR(*whitelist)
+		if err != nil {
+			log.Fatal("Unable to parse CIDR address")
 		}
-		log.Printf("[notice] sys.json providing statistics to %s", *from)
+		log.Printf("[notice] sys.json request whitelist set to %s", *whitelist)
 	}
 
 	log.Printf("[notice] sys.json listening on %s", *listen)
@@ -51,10 +51,15 @@ func main() {
 func statsHandler(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{}
 	
-	if len(*from) == 0 || (len(*from) > 0 && strings.HasPrefix(r.RemoteAddr, *from)) {
+	requestIpPort := strings.Split(r.RemoteAddr, ":")
+	requestIp := net.ParseIP(requestIpPort[0])
+	_, whitelistedNet, _ := net.ParseCIDR(*whitelist)
+
+	if len(*whitelist) == 0 || (len(*whitelist) > 0 && whitelistedNet.Contains(requestIp)){
 		loadModules(resp, r.URL.Query().Get("modules"))
 	} else {
-		resp["error"] = "Not authorised"
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
 	}
 		
 	respJSON, err := json.Marshal(resp)
