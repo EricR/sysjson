@@ -18,7 +18,7 @@ What you do with that data is up to you.
 
 ```bash
 go build
-./sysjson --listen 0.0.0.0:5374
+./sys.json --listen 0.0.0.0:5374
 ```
 
 ## Example Requests
